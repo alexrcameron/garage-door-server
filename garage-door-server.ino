@@ -1,3 +1,5 @@
+#include "config.h"
+
 #ifdef ESP32
   #include <WiFi.h>
   #include <AsyncTCP.h>
@@ -22,11 +24,11 @@ uint8_t sensor1[8] = { 0x28, 0x67, 0x4C, 0x8F, 0x1E, 0x19, 0x01, 0x6D  };
 uint8_t sensor2[8] = { 0x28, 0x76, 0x92, 0x5B, 0x1E, 0x19, 0x01, 0xF2  };
 uint8_t sensor3[8] = { 0x28, 0x60, 0xE6, 0x8A, 0x1E, 0x19, 0x01, 0xE7  };
 
-const char* ssid = "ssid";
-const char* password = "password";
+const char* ssid = CONFIG_NETWORK_SSID;
+const char* password = CONFIG_NETWORK_PASSWORD;
 
-const char* http_username = "username";
-const char* http_password = "password";
+const char* http_username = CONFIG_LOGIN_USERNAME;
+const char* http_password = CONFIG_LOGIN_PASSWORD;
 
 AsyncWebServer server(80);
 
