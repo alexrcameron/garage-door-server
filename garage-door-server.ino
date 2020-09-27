@@ -126,6 +126,9 @@ void setup_routes() {
   });
 
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if(!request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
+
     Serial.println("Sending sensor data...");
     String data = getSensorData();
     Serial.println(data);
@@ -133,6 +136,9 @@ void setup_routes() {
   });
        
   server.on("/odoor1", HTTP_POST, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
+
     if (switchStateCur==0){
       Serial.println("Opening Door #1");
       startRelay(relayPin);
@@ -144,6 +150,9 @@ void setup_routes() {
   });
 
   server.on("/cdoor1", HTTP_POST, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
+
     if (switchStateCur==1){
       Serial.println("Closing Door #1");
       startRelay(relayPin);
@@ -155,6 +164,9 @@ void setup_routes() {
   });
   
   server.on("/odoor2", HTTP_POST, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
+
     if (switchStateCur2==0){
       Serial.println("Opening Door #2");
       startRelay(relayPin2);
@@ -166,6 +178,9 @@ void setup_routes() {
   });
 
   server.on("/cdoor2", HTTP_POST, [](AsyncWebServerRequest *request){
+    if(!request->authenticate(http_username, http_password))
+      return request->requestAuthentication();
+
     if (switchStateCur2==1){
       Serial.println("Closing Door #2");
       startRelay(relayPin2);
