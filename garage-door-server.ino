@@ -18,11 +18,11 @@
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
-float tempSensor1, tempSensor2, tempSensor3;
-
-uint8_t sensor1[8] = { 0x28, 0x67, 0x4C, 0x8F, 0x1E, 0x19, 0x01, 0x6D  };
-uint8_t sensor2[8] = { 0x28, 0x76, 0x92, 0x5B, 0x1E, 0x19, 0x01, 0xF2  };
-uint8_t sensor3[8] = { 0x28, 0x60, 0xE6, 0x8A, 0x1E, 0x19, 0x01, 0xE7  };
+uint8_t tempSensors[][8] = {
+  { 0x28, 0x67, 0x4C, 0x8F, 0x1E, 0x19, 0x01, 0x6D  },
+  { 0x28, 0x76, 0x92, 0x5B, 0x1E, 0x19, 0x01, 0xF2  },
+  { 0x28, 0x60, 0xE6, 0x8A, 0x1E, 0x19, 0x01, 0xE7  }
+};
 
 const char* ssid = CONFIG_NETWORK_SSID;
 const char* password = CONFIG_NETWORK_PASSWORD;
@@ -32,9 +32,9 @@ const char* http_password = CONFIG_LOGIN_PASSWORD;
 
 AsyncWebServer server(80);
 
-int switchPin = 12;//0
-int switchStateCur;
-int relayPin = 4;//3
+int switchPin1 = 12;//0
+int switchStateCur1;
+int relayPin1 = 4;//3
 
 int switchPin2 = 13;//0
 int switchStateCur2;
@@ -83,15 +83,42 @@ void wifi_connect() {
   }
 }
 
+bool lightsAreOn() {
+  bool lightsOn = true;
+  int sensorValue = analogRead(A0);
+  
+  // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+  float voltage = sensorValue * (5.0 / 1023.0);
+  Serial.println("Light Sensor: " + (String)voltage + "V");
+
+  if (voltage > 4){
+    lightsOn = false;
+  }
+
+  return lightsOn;
+}
+
 String getSensorData() {
   String data = "";
 
   data += "{ \"door1_isOpen\": ";
-  data += switchStateCur==1 ? "true" : "false";
+  data += switchStateCur1 == 1 ? "true" : "false";
 
   data += ", \"door2_isOpen\": ";
-  data += switchStateCur2==1 ? "true" : "false";
+  data += switchStateCur2 == 1 ? "true" : "false";
 
+  data += ", \"building_temp\": ";
+  data += (String)sensors.getTempF(tempSensors[0]);
+
+  data += ", \"fridge_temp\": ";
+  data += (String)sensors.getTempF(tempSensors[1]);
+
+  data += ", \"freezer_temp\": ";
+  data += (String)sensors.getTempF(tempSensors[2]);
+
+  data += ", \"lights_areOn\": ";
+  data += lightsAreOn() == 1 ? "true" : "false";
+  
   data += " }";
   
   return data;
@@ -99,9 +126,9 @@ String getSensorData() {
 
 void startRelay(int pinNumber){
   digitalWrite(pinNumber, 1);
-  Serial.println("light on");
+  Serial.println("pin #" + (String)pinNumber + " on");
 
-  if(pinNumber == relayPin){
+  if(pinNumber == relayPin1){
     relayStarted[0] = micros();
   } else if (pinNumber == relayPin2){
     relayStarted[1] = micros();
@@ -111,11 +138,13 @@ void startRelay(int pinNumber){
 void checkRelays() {
   unsigned long now = micros();
   int period = relayBlinkPeriod * 1000; // convert micros into ms
-  if(now - relayStarted[0] > period){
-    digitalWrite(relayPin, 0);
+  if(digitalRead(relayPin1) == 1 && now - relayStarted[0] > period){
+    digitalWrite(relayPin1, 0);
+    Serial.println("pin #" + (String)relayPin1 + " off");
   }
-  if(now - relayStarted[1] > period){
+  if(digitalRead(relayPin2) == 1 && now - relayStarted[1] > period){
     digitalWrite(relayPin2, 0);
+    Serial.println("pin #" + (String)relayPin2 + " off");
   }
 }
 
@@ -141,9 +170,9 @@ void setup_routes() {
     if(!request->authenticate(http_username, http_password))
       return request->requestAuthentication();
 
-    if (switchStateCur==0){
+    if (switchStateCur1 == 0){
       Serial.println("Opening Door #1");
-      startRelay(relayPin);
+      startRelay(relayPin1);
     } else {
       Serial.println("Door #1 Already Open");
     }
@@ -155,9 +184,9 @@ void setup_routes() {
     if(!request->authenticate(http_username, http_password))
       return request->requestAuthentication();
 
-    if (switchStateCur==1){
+    if (switchStateCur1 == 1){
       Serial.println("Closing Door #1");
-      startRelay(relayPin);
+      startRelay(relayPin1);
     } else {
       Serial.println("Door #1 Already Closed");
     }
@@ -169,7 +198,7 @@ void setup_routes() {
     if(!request->authenticate(http_username, http_password))
       return request->requestAuthentication();
 
-    if (switchStateCur2==0){
+    if (switchStateCur2 == 0){
       Serial.println("Opening Door #2");
       startRelay(relayPin2);
     } else {
@@ -183,7 +212,7 @@ void setup_routes() {
     if(!request->authenticate(http_username, http_password))
       return request->requestAuthentication();
 
-    if (switchStateCur2==1){
+    if (switchStateCur2 == 1){
       Serial.println("Closing Door #2");
       startRelay(relayPin2);
     } else {
@@ -198,11 +227,11 @@ void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200,SERIAL_8N1,SERIAL_TX_ONLY);
 
-  pinMode(switchPin, INPUT_PULLUP);//setup pin as input
+  pinMode(switchPin1, INPUT_PULLUP);//setup pin as input
   pinMode(switchPin2, INPUT_PULLUP);//setup pin as input
-  pinMode(relayPin, OUTPUT);
+  pinMode(relayPin1, OUTPUT);
   pinMode(relayPin2, OUTPUT);
-  digitalWrite(relayPin, LOW);
+  digitalWrite(relayPin1, LOW);
   digitalWrite(relayPin2, LOW);
 
   // Gives the serial monitor time to initialize
@@ -220,7 +249,7 @@ void setup() {
 }
 
 void loop() {
-  switchStateCur = digitalRead(switchPin);
+  switchStateCur1 = digitalRead(switchPin1);
   switchStateCur2 = digitalRead(switchPin2);
   checkRelays();
 }
