@@ -22,6 +22,8 @@ uint8_t tempSensors[][8] = {
   { 0x28, 0x60, 0xE6, 0x8A, 0x1E, 0x19, 0x01, 0xE7  }
 };
 
+int tempSensorOverridePin = 0;
+
 const char* ssid = CONFIG_NETWORK_SSID;
 const char* password = CONFIG_NETWORK_PASSWORD;
 
@@ -61,7 +63,7 @@ void wifi_connect() {
     if (WiFi.status() != WL_CONNECTED){
       Serial.println("Failed To Connect!");
     } else {
-      Serial.println("WiFi Connected");  
+      Serial.println("WiFi Connected");
       Serial.println("IP Address: ");
       Serial.println(WiFi.localIP());
       Serial.println(WiFi.macAddress());
@@ -69,6 +71,9 @@ void wifi_connect() {
 
   } else {
     Serial.println("Wifi Already Connected");
+      Serial.println("IP Address: ");
+      Serial.println(WiFi.localIP());
+      Serial.println(WiFi.macAddress());
   }
 }
 
@@ -151,7 +156,9 @@ void setup_routes() {
 
     Serial.println("Sending sensor data...");
 
-    sensors.requestTemperatures();
+    if(digitalRead(tempSensorOverridePin) != 0) {
+      sensors.requestTemperatures();
+    }
 
     String data = getSensorData();
     Serial.println(data);
@@ -221,6 +228,7 @@ void setup() {
 
   pinMode(switchPin1, INPUT_PULLUP);//setup pin as input
   pinMode(switchPin2, INPUT_PULLUP);//setup pin as input
+  pinMode(tempSensorOverridePin, INPUT_PULLUP);//setup pin as input
   pinMode(relayPin1, OUTPUT);
   pinMode(relayPin2, OUTPUT);
   digitalWrite(relayPin1, LOW);
